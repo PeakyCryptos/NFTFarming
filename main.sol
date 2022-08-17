@@ -149,7 +149,7 @@ contract Controller {
         return ownedNFTS;
     }
 
-    function claimRewards(uint256[] calldata tokenIDS, uint256 withdrawFlag) public {
+    function claimRewards(uint256[] calldata tokenIDS, uint256 withdrawFlag) external {
         // called to claim rewards without withdrawing NFT if flag is 0
         // else claim and withdraw each NFT to owner (also claims rewards as well)
 
@@ -169,7 +169,7 @@ contract Controller {
             if(withdrawFlag == 0) {
                 // reset timestamp to current timestamp (taking into account the excess time that's not a full day)
                 require(daysStaked > 0, "No rewards to claim for specified token!"); // revert to leave timers unchanged
-                timeStaked[tokenID] = block.timestamp + daysStaked;
+                timeStaked[tokenID] += daysStaked;
             } else {
                 // clear NFT owner mappings, timer and adjust user/contract balances
                 NFTBalance[tokenID] = address(0);
