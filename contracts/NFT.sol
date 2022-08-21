@@ -22,12 +22,11 @@ contract NFT is ERC721 {
         return "ipfs://QmYsuuaVVa8GAXDDxwtBfNBgWtyJJXKtoCk5cQBWiTHXTW/";
     }
 
-    function mint() external onlyController {
+    function mint(address recipient) external onlyController {
         // mints are controlled only by the controller contract
         require(tokenSupply < MAX_SUPPLY, "Maximum amount of NFTs minted");
         
-        _mint(tx.origin, tokenSupply);
+        _safeMint(recipient, tokenSupply);
         tokenSupply++;
     }
-
 }

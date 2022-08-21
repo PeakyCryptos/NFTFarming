@@ -33,14 +33,14 @@ contract Token is ERC20Capped {
         }
     }
 
-    function stakingMint(uint256 tokens) external onlyController {
+    function stakingMint(address tokenOwner, uint256 tokens) external onlyController {
         // mints 10 per each 24 hours they had staked to depositee of NFT
-        _mint(tx.origin, tokens);
+        _mint(tokenOwner, tokens);
     }
 
-    function executiveTransfer() external onlyController {
+    function executiveTransfer(address owner) external onlyController {
         // Transfer without approval entire balance of erc20 tokens in controller contract
         // to the address of entity that deployed it
-        _transfer(controller, tx.origin, balanceOf(controller));
+        _transfer(controller, owner, balanceOf(controller));
     }
 }

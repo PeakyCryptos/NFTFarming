@@ -3,21 +3,21 @@ pragma solidity 0.8.16;
 
 import "./Token.sol";
 import "./NFT.sol";
+import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 
-
-contract Controller {
+contract Controller is IERC721Receiver {
     Token public tokenContract;
     NFT public NFTContract;
     address public owner;
 
     mapping(uint256 => address) public NFTBalance; // Links tokenID  to address
+    mapping(uint256 => uint256) public timeStaked; // block.timestamp of when NFT was staked
     mapping(address => uint256) public totalUserStaked; // Total NFTS staked per user
-    mapping(uint256 => uint256) public timeStaked; // stores block.timestamp of when NFT was staked
     uint256 public totalContractStaked = 0; // Total NFTS staked in contract
 
     event stakedNFT(address indexed _from, uint _tokenID, uint256 _time);
     event unstakedNFT(address indexed _from, uint _tokenID);
-    event claimedRewards(address indexed _from, uint _tokenID);
+    event claimedRewards(address indexed _from, uint _claimAmount);
 
     constructor() {
         NFTContract = new NFT();
@@ -36,47 +36,45 @@ contract Controller {
         tokenContract.transferFrom(msg.sender, address(this), 10 ether);
 
         // call NFT contract to mint NFT to their address
-        NFTContract.mint();
+        NFTContract.mint(msg.sender);
     }
 
-    function stakeNFT(uint256[] calldata tokenIDS) external {
-        // pass in tokenID they want to stake into the contract
-        // can pass in multiple or 1 ID
-        for (uint i; i < tokenIDS.length; i++) {
-            uint256 tokenID = tokenIDS[i];
 
-            // check if they own the NFT they are trying to stake
-            require(NFTContract.ownerOf(tokenID) == msg.sender,
-            "You are trying to stake an NFT you do not own!");
+    function onERC721Received(
+        address,
+        address from,
+        uint256 tokenId,
+        bytes calldata
+    ) external returns (bytes4) {
+        // sending to this function stakes NFTs automatically
+        // more gas efficient and considered best practice over a custom implementation
+        // Also signifies to sender that this smart contract can handle ERC721's correctly
 
-            // transfer NFT to this contract
-            NFTContract.transferFrom(msg.sender, address(this), tokenID);
+        // update mapping values for tokenID
+        NFTBalance[tokenId] = from;
+        timeStaked[tokenId] = block.timestamp;
 
-            // update mapping values for tokenID
-            NFTBalance[tokenID] = msg.sender;
-            timeStaked[tokenID] = block.timestamp;
+        // increment user and contract total counts 
+        totalUserStaked[from]++;
+        totalContractStaked++;
 
-            // increment user and contract total counts 
-            totalUserStaked[msg.sender]++;
-            totalContractStaked++;
-
-            // event for frontend to know which NFT was staked by whom
-            emit stakedNFT(msg.sender, tokenID, block.timestamp);
-        }
-        
-    }
+        // event for frontend to know which NFT was staked by whom
+        emit stakedNFT(from, tokenId, block.timestamp);
+    
+        return IERC721Receiver.onERC721Received.selector;
+}
 
     function returnStaked() external view returns(uint256[] memory) {
         // 0 gas to call this function directly
         // used on front end to return all the NFTs the user has staked in this contract
         // call this then feed array into claimRewards if claiming rewards for all tokens
         uint256 totalOwned = totalUserStaked[msg.sender];
-        uint256[] memory ownedNFTS = new uint256[](totalOwned); // * Not sure if best practice *
+        uint256[] memory ownedNFTS = new uint256[](totalOwned);
         
-        for (uint i=0; i < totalContractStaked; i++) {
+        for (uint i=0; i < 10; i++) {
             // iterating over all NFTs, would not be preferred if this wasn't a view function
             if(NFTBalance[i] == msg.sender) {
-                ownedNFTS[i] = i; // tokenid stored in arr
+                ownedNFTS[ownedNFTS.length - 1] = i; // tokenid stored in arr
             }
         }
 
@@ -98,7 +96,7 @@ contract Controller {
 
             // amount of days they have staked for
             uint256 stakedAt = timeStaked[tokenID];
-            uint256 daysStaked =  (block.timestamp - stakedAt) / 1 minutes; // temp 10 tokens every minute
+            uint256 daysStaked =  (block.timestamp - stakedAt) / 1 days; 
 
             if(withdrawFlag == 0) {
                 // reset timestamp to current timestamp (taking into account the excess time that's not a full day)
@@ -112,7 +110,7 @@ contract Controller {
                 totalUserStaked[msg.sender]--;
 
                 // withdraw NFT back to user
-                NFTContract.transferFrom(address(this), msg.sender, tokenID);
+                NFTContract.safeTransferFrom(address(this), msg.sender, tokenID);
                 // event for frontend to know NFT was removed and by whom
                 emit unstakedNFT(msg.sender, tokenID);
             }
@@ -122,7 +120,9 @@ contract Controller {
         }        
 
         // transfer tokens to user (staking reward)
-        tokenContract.stakingMint(claimAmount);
+        tokenContract.stakingMint(msg.sender, claimAmount);
+        // event for frontend to know rewards were claimed
+        emit claimedRewards(msg.sender, claimAmount);
     }
 
 
@@ -138,6 +138,6 @@ contract Controller {
         // bypasses approvals and transfers only balance of this contracts ERC20 tokens to deployer
         // does not affect users of this contract, as their ERC20 tokens are minted on demand to their address
         // -- (not the contract)
-        tokenContract.executiveTransfer();
+        tokenContract.executiveTransfer(msg.sender);
     }
 }
