@@ -26,7 +26,7 @@ contract NFT is ERC721 {
         // mints are controlled only by the controller contract
         require(tokenSupply < MAX_SUPPLY, "Maximum amount of NFTs minted");
         
-        _safeMint(recipient, tokenSupply);
         tokenSupply++;
+        _safeMint(recipient, tokenSupply);
     }
 }
