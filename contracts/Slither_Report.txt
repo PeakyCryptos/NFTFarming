@@ -1,0 +1,43 @@
+Controller.mintNFT() (contracts/Controller.sol#28-42) ignores return value by tokenContract.transferFrom(msg.sender,address(this),10000000000000000000) (contracts/Controller.sol#38)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#unchecked-transfer
+
+Controller.claimRewards(uint256[],uint256) (contracts/Controller.sol#85-138) performs a multiplication on the result of a division:
+        -daysStaked = (block.timestamp - stakedAt) / 86400 (contracts/Controller.sol#104)
+        -claimAmount += daysStaked * (10000000000000000000) (contracts/Controller.sol#131)
+Token.buyTokens() (contracts/Token.sol#21-36) performs a multiplication on the result of a division:
+        -amount = (msg.value / 10 ** 18) * 10 ** 18 (contracts/Token.sol#30)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#divide-before-multiply
+
+ERC721._checkOnERC721Received(address,address,uint256,bytes) (node_modules/@openzeppelin/contracts/token/ERC721/ERC721.sol#394-416) ignores return value by IERC721Receiver(to).onERC721Received(_msgSender(),from,tokenId,data) (node_modules/@openzeppelin/contracts/token/ERC721/ERC721.sol#401-412)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#unused-return
+
+Controller.claimRewards(uint256[],uint256) (contracts/Controller.sol#85-138) has external calls inside a loop: NFTContract.safeTransferFrom(address(this),msg.sender,tokenID) (contracts/Controller.sol#121-125)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation/#calls-inside-a-loop
+
+Variable 'ERC721._checkOnERC721Received(address,address,uint256,bytes).retval (node_modules/@openzeppelin/contracts/token/ERC721/ERC721.sol#401)' in ERC721._checkOnERC721Received(address,address,uint256,bytes) (node_modules/@openzeppelin/contracts/token/ERC721/ERC721.sol#394-416) potentially used before declaration: retval == IERC721Receiver.onERC721Received.selector (node_modules/@openzeppelin/contracts/token/ERC721/ERC721.sol#402)
+Variable 'ERC721._checkOnERC721Received(address,address,uint256,bytes).reason (node_modules/@openzeppelin/contracts/token/ERC721/ERC721.sol#403)' in ERC721._checkOnERC721Received(address,address,uint256,bytes) (node_modules/@openzeppelin/contracts/token/ERC721/ERC721.sol#394-416) potentially used before declaration: reason.length == 0 (node_modules/@openzeppelin/contracts/token/ERC721/ERC721.sol#404)
+Variable 'ERC721._checkOnERC721Received(address,address,uint256,bytes).reason (node_modules/@openzeppelin/contracts/token/ERC721/ERC721.sol#403)' in ERC721._checkOnERC721Received(address,address,uint256,bytes) (node_modules/@openzeppelin/contracts/token/ERC721/ERC721.sol#394-416) potentially used before declaration: revert(uint256,uint256)(32 + reason,mload(uint256)(reason)) (node_modules/@openzeppelin/contracts/token/ERC721/ERC721.sol#409)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#pre-declaration-usage-of-local-variables
+
+Reentrancy in Controller.claimRewards(uint256[],uint256) (contracts/Controller.sol#85-138):
+        External calls:
+        - NFTContract.safeTransferFrom(address(this),msg.sender,tokenID) (contracts/Controller.sol#121-125)
+        Event emitted after the call(s):
+        - unstakedNFT(msg.sender,tokenID) (contracts/Controller.sol#127)
+Reentrancy in Controller.claimRewards(uint256[],uint256) (contracts/Controller.sol#85-138):
+        External calls:
+        - tokenContract.stakingMint(msg.sender,claimAmount) (contracts/Controller.sol#135)
+        Event emitted after the call(s):
+        - claimedRewards(msg.sender,claimAmount) (contracts/Controller.sol#137)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#reentrancy-vulnerabilities-3
+
+Controller.claimRewards(uint256[],uint256) (contracts/Controller.sol#85-138) uses timestamp for comparisons
+        Dangerous comparisons:
+        - require(bool,string)(daysStaked > 0,No rewards to claim for specified token!) (contracts/Controller.sol#108-111)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#block-timestamp
+
+ERC721._checkOnERC721Received(address,address,uint256,bytes) (node_modules/@openzeppelin/contracts/token/ERC721/ERC721.sol#394-416) uses assembly
+        - INLINE ASM (node_modules/@openzeppelin/contracts/token/ERC721/ERC721.sol#408-410)
+Address.verifyCallResult(bool,bytes,string) (node_modules/@openzeppelin/contracts/utils/Address.sol#201-221) uses assembly
+        - INLINE ASM (node_modules/@openzeppelin/contracts/utils/Address.sol#213-216)
+Reference: https://github.com/crytic/slither/wiki/Detector-Documentation#assembly-usage
