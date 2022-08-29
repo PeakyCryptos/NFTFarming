@@ -6,22 +6,24 @@ import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Capped.sol";
 contract Token is ERC20Capped {
     address public immutable controller;
 
-    constructor() 
-    ERC20("Token", "TK") 
-    ERC20Capped(1_000_000 ether) // All mints capped to 1 mil tokens
+    constructor()
+        ERC20("Token", "TK")
+        ERC20Capped(1_000_000 ether) // All mints capped to 1 mil tokens
     {
-       controller = msg.sender; 
+        controller = msg.sender;
     }
 
-    modifier onlyController {
+    modifier onlyController() {
         require(msg.sender == controller);
         _;
-    } 
+    }
 
-    function buyTokens() external payable  {
+    function buyTokens() external payable {
         // Users can buy tokens freely up until the cap amount
-        require(msg.value >= 1 ether,
-        "minimum amount to mint is 1000 tokens which is 1 ether");
+        require(
+            msg.value >= 1 ether,
+            "minimum amount to mint is 1000 tokens which is 1 ether"
+        );
 
         // 1000 tokens per 1 eth, refund excess to user
         uint256 excess = msg.value % 10**18; // fractional porition
@@ -33,7 +35,10 @@ contract Token is ERC20Capped {
         }
     }
 
-    function stakingMint(address tokenOwner, uint256 tokens) external onlyController {
+    function stakingMint(address tokenOwner, uint256 tokens)
+        external
+        onlyController
+    {
         // mints 10 per each 24 hours they had staked to depositee of NFT
         _mint(tokenOwner, tokens);
     }

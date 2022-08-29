@@ -9,23 +9,25 @@ contract NFT is ERC721 {
     uint256 public constant MAX_SUPPLY = 10;
 
     constructor() ERC721("10Vitaliks", "10VT") {
-       controller = msg.sender; 
+        controller = msg.sender;
     }
 
-    modifier onlyController {
-        require(msg.sender == controller,
-        "Can only be called by controller contract");
+    modifier onlyController() {
+        require(
+            msg.sender == controller,
+            "Can only be called by controller contract"
+        );
         _;
-    } 
+    }
 
-    function _baseURI() override internal pure returns(string memory) {
+    function _baseURI() internal pure override returns (string memory) {
         return "ipfs://QmYsuuaVVa8GAXDDxwtBfNBgWtyJJXKtoCk5cQBWiTHXTW/";
     }
 
     function mint(address recipient) external onlyController {
         // mints are controlled only by the controller contract
         require(tokenSupply < MAX_SUPPLY, "Maximum amount of NFTs minted");
-        
+
         tokenSupply++;
         _safeMint(recipient, tokenSupply);
     }
