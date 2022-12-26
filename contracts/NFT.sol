@@ -10,7 +10,6 @@ contract NFT is ERC721 {
 
     constructor() ERC721("10Vitaliks", "10VT") {
         controller = msg.sender;
-        
     }
 
     modifier onlyController() {
@@ -25,12 +24,13 @@ contract NFT is ERC721 {
         return "ipfs://QmYsuuaVVa8GAXDDxwtBfNBgWtyJJXKtoCk5cQBWiTHXTW/";
     }
 
+    /*
+     *  mints are controlled only by the controller contract
+     *  NFT's are minted in sequential order (only 1 owner per ID)
+     *  current supply = current ID to mint
+     */
     function mint(address recipient) external onlyController {
-        // mints are controlled only by the controller contract
         require(tokenSupply < MAX_SUPPLY, "Maximum amount of NFTs minted");
-
-        // NFT's are minted in sequential order (only 1 owner per ID)
-        // current supply = current ID to mint
         tokenSupply++;
         _safeMint(recipient, tokenSupply);
     }

@@ -4,7 +4,6 @@ pragma solidity 0.8.17;
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Capped.sol";
 
 contract Token is ERC20Capped {
-
     address public immutable controller;
 
     uint256 tokensPerWei;
@@ -22,11 +21,17 @@ contract Token is ERC20Capped {
         _;
     }
 
+    /*
+     *  mint specified amount of tokens per wei
+     */
     function buyTokens() external payable {
-        // mint specified amount of tokens per wei
         _mint(msg.sender, msg.value * tokensPerWei);
     }
 
+    /*
+     *  mints specified tokens for each day they had staked to the depositee of NFT
+     *  only callable by the controller contract, if it's interal records are valid
+     */
     function stakingMint(address tokenOwner, uint256 tokens)
         external
         onlyController
@@ -35,9 +40,10 @@ contract Token is ERC20Capped {
         _mint(tokenOwner, tokens);
     }
 
+    /*
+     *  Transfer all erc20 tokens sold to the controller contract to the address of owner
+     */
     function executiveTransfer(address owner) external onlyController {
-        // Transfer entire balance of erc20 tokens in controller contract
-        // to the address of owner
         _transfer(controller, owner, balanceOf(controller));
     }
 }

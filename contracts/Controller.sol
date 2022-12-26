@@ -6,7 +6,6 @@ import "./NFT.sol";
 import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 
 contract Controller is IERC721Receiver {
-
     // contracts being interacted with
     Token public tokenContract;
     NFT public NFTContract;
@@ -26,7 +25,6 @@ contract Controller is IERC721Receiver {
     struct nftRecord {
         // current owner
         address owner;
-
         // block.timestamp of when NFT was staked
         uint256 timeStaked;
     }
@@ -35,21 +33,26 @@ contract Controller is IERC721Receiver {
     mapping(uint256 => nftRecord) public controllerNFTRecord;
 
     // Total NFTS staked per user
-    mapping(address => uint256) public totalUserStaked; 
+    mapping(address => uint256) public totalUserStaked;
 
     // Total NFTS staked in contract
-    uint256 public totalContractStaked = 0; 
+    uint256 public totalContractStaked = 0;
 
     event stakedNFT(address indexed _from, uint256 _tokenID, uint256 _time);
     event unstakedNFT(address indexed _from, uint256 _tokenID);
     event claimedRewards(address indexed _from, uint256 _claimAmount);
 
-    constructor(uint256 _tokensPerWei, uint256 _maxSupplyNFT, uint256 _tokensPerNFT, uint256 _rewardTokens) {
+    constructor(
+        uint256 _tokensPerWei,
+        uint256 _maxSupplyNFT,
+        uint256 _tokensPerNFT,
+        uint256 _rewardTokens
+    ) {
         NFTContract = new NFT();
         tokenContract = new Token(_tokensPerWei);
-        
+
         owner = msg.sender;
-        
+
         maxSupplyNFT = _maxSupplyNFT;
 
         tokensPerNFT = _tokensPerNFT;
@@ -58,26 +61,25 @@ contract Controller is IERC721Receiver {
     }
 
     /*
-     *  mints 1 NFT for specified amount of token   
+     *  mints 1 NFT for specified amount of token
      */
     function mintNFT() external {
         uint256 tokensBalance = tokenContract.balanceOf(msg.sender);
 
         // check balance to make sure they have enough tokens for 1 NFT
-        require(
-            tokensBalance >= (tokensPerNFT),
-            "Insufficient tokens to mint"
-        );
+        require(tokensBalance >= (tokensPerNFT), "Insufficient tokens to mint");
 
         // transfer their token to this contract
         // will revert if they have not approved this
-        require(tokenContract.transferFrom(msg.sender, address(this), tokensPerNFT));
+        require(
+            tokenContract.transferFrom(msg.sender, address(this), tokensPerNFT)
+        );
 
         // call NFT contract to mint NFT to their address
         NFTContract.mint(msg.sender);
     }
 
-    /*        
+    /*
      *  sending to this function stakes NFTs automatically
      *  more gas efficient and considered best practice over a custom implementation
      *  also signifies to sender that this smart contract can handle ERC721's correctly
@@ -88,9 +90,7 @@ contract Controller is IERC721Receiver {
         uint256 tokenId,
         bytes calldata
     ) external returns (bytes4) {
-
-
-        // update mapping values for tokenID        
+        // update mapping values for tokenID
         controllerNFTRecord[tokenId].owner = from;
         controllerNFTRecord[tokenId].timeStaked = block.timestamp;
 
@@ -107,8 +107,8 @@ contract Controller is IERC721Receiver {
     /*
      *  0 gas to call this function directly
      *  used on front end to return all the NFTs the user has staked in this contract
-     *  call this then feed array into claimRewards if claiming rewards for all token 
-    */
+     *  call this then feed array into claimRewards if claiming rewards for all token
+     */
     function returnStaked() external view returns (uint256[] memory) {
         uint256 totalOwned = totalUserStaked[msg.sender];
         uint256[] memory ownedNFTS = new uint256[](totalOwned);
@@ -117,7 +117,7 @@ contract Controller is IERC721Receiver {
             // iterating over all NFTs, would not be preferred if this wasn't a view function
             if (controllerNFTRecord[i].owner == msg.sender) {
                 // tokenid stored in arr
-                ownedNFTS[ownedNFTS.length - 1] = i; 
+                ownedNFTS[ownedNFTS.length - 1] = i;
             }
         }
 
@@ -126,14 +126,13 @@ contract Controller is IERC721Receiver {
 
     /*
      *  called to claim rewards without withdrawing NFT if flag is true
-     *  else claim and withdraw each NFT to owner (also claims rewards as well)   
+     *  else claim and withdraw each NFT to owner (also claims rewards as well)
      */
     function claimRewards(uint256[] calldata tokenIDS, bool withdrawFlag)
         external
-    {   
-
+    {
         // ERC20 token to claim
-        uint256 claimAmount; 
+        uint256 claimAmount;
 
         // claim rewards for all specified NFTS
         for (uint256 i = 0; i < tokenIDS.length; i++) {
@@ -155,7 +154,7 @@ contract Controller is IERC721Receiver {
                     "No rewards to claim for specified token!"
                 ); // revert to leave timers unchanged
 
-                // reset timestamp to current timestamp (taking into account the excess time that's not a full day)                
+                // reset timestamp to current timestamp (taking into account the excess time that's not a full day)
                 controllerNFTRecord[tokenID].timeStaked += daysStaked;
             } else {
                 // clear NFT owner mappings, timer and adjust user/contract balances
@@ -173,11 +172,10 @@ contract Controller is IERC721Receiver {
                     msg.sender,
                     tokenID
                 );
-
             }
 
             // increment their token to claim
-            claimAmount += daysStaked * (tokensPerNFT);
+            claimAmount += daysStaked * rewardTokens;
         }
 
         // event for frontend to know rewards were claimed
