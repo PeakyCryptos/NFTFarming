@@ -67,8 +67,6 @@ contract Controller is
         // init upgradeable interface
         __UUPSUpgradeable_init();
 
-        owner = msg.sender;
-
         tokensPerNFT = _tokensPerNFT;
 
         rewardTokens = _rewardTokens;
@@ -234,13 +232,13 @@ contract Controller is
      *  does not affect users of this contract, as their ERC20 token are minted on demand to their address
      */
     function ownerWithdraw() external payable {
-        require(msg.sender == owner, "Address is not the owner!");
+        require(msg.sender == deployer, "Address is not the deployer!");
 
         if (address(this).balance != 0) {
             payable(msg.sender).transfer(address(this).balance);
         }
 
-        tokenContract.executiveTransfer(msg.sender);
+        tokenContract.executiveTransfer();
     }
 
     // @dev internal check that ensures only initial deployer can upgrade the contract

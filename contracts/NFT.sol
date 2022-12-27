@@ -45,7 +45,7 @@ contract NFT is Initializable, ERC721Upgradeable, UUPSUpgradeable {
         _;
     }
 
-    function _baseURI() internal pure override returns (string memory) {
+    function _baseURI() internal pure virtual override returns (string memory) {
         return "ipfs://QmYsuuaVVa8GAXDDxwtBfNBgWtyJJXKtoCk5cQBWiTHXTW/";
     }
 
@@ -63,7 +63,7 @@ contract NFT is Initializable, ERC721Upgradeable, UUPSUpgradeable {
     // @dev internal check that ensures only initial deployer can upgrade the contract
     function _authorizeUpgrade(
         address /* newImplementation */
-    ) internal view override {
+    ) internal view virtual override {
         require(msg.sender == deployer);
     }
 }

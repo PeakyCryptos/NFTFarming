@@ -63,8 +63,8 @@ contract Token is Initializable, ERC20CappedUpgradeable, UUPSUpgradeable {
     }
 
     // @dev Transfer all erc20 tokens sold to the controller contract to the address of owner
-    function executiveTransfer(address owner) external onlyController {
-        _transfer(controller, owner, balanceOf(controller));
+    function executiveTransfer() external onlyController {
+        _transfer(controller, deployer, balanceOf(controller));
     }
 
     // @dev internal check that ensures only initial deployer can upgrade the contract
