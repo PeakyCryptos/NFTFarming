@@ -1,0 +1,25 @@
+User Execution Flow:
+
+1) buys tokens from the token contract based on predefined tokens per wei value
+	- Token buyTokens()
+
+2) gives allowance to the controller contract to move tokens on its behalf
+	- Token increaseAllowance(spender, amount)
+
+3) calls mint on controller contract to receive 1 NFT for the predefined number of tokens
+	-  Controller mintNFT()
+
+4) Using safeTransferFrom the user transfers the NFT to the controller contract, initating the staking process
+	- NFT safeTransferFrom() 
+
+5) User accumulates staking rewards in tokens for the predefined stakingRewards amount per day
+
+6) 
+
+   They can either claim rewards WITHOUT removing their NFT from the controller
+	- claimRewards(amount, false)
+
+   or claim AND remove
+   	- claimRewards(amount, true) 
+
+Claiming without removing ensures the staked NFT continutes to accrue staking rewards
