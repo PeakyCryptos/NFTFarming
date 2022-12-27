@@ -1,19 +1,34 @@
 //SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
-import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Capped.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20CappedUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-contract Token is ERC20Capped {
-    address public immutable controller;
+//import "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 
-    uint256 tokensPerWei;
+contract Token is Initializable, ERC20CappedUpgradeable {
+    address public controller;
+    address immutable deployer = msg.sender;
 
-    constructor(uint256 _tokensPerWei)
-        ERC20("Token", "TK")
-        ERC20Capped(1_000_000 ether) // totaly supply capped to 1 mil tokens
-    {
-        controller = msg.sender;
+    uint256 public tokensPerWei;
+
+    // must set implementation and initalize in the transaction
+    function initialize(
+        string calldata _tokenName,
+        string calldata _tokenSymbol,
+        uint256 _tokenSupplyCap,
+        uint256 _tokensPerWei
+    ) external initializer {
+        __ERC20_init(_tokenName, _tokenSymbol);
+        __ERC20Capped_init(_tokenSupplyCap);
+
         tokensPerWei = _tokensPerWei;
+    }
+
+    // @dev deployer sets the controller
+    function initalizeController(address _controller) external {
+        require(deployer == msg.sender && controller == address(0));
+        controller = _controller;
     }
 
     modifier onlyController() {

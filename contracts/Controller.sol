@@ -1,11 +1,22 @@
 //SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
+// ERC20 and ERC721 contracts
 import "./Token.sol";
 import "./NFT.sol";
-import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 
-contract Controller is IERC721Receiver {
+// Helpers
+import "@openzeppelin/contracts-upgradeable/token/ERC721/IERC721ReceiverUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+
+contract Controller is Initializable, IERC721ReceiverUpgradeable {
+    struct nftRecord {
+        // current owner
+        address owner;
+        // block.timestamp of when NFT was staked
+        uint256 timeStaked;
+    }
+
     // contracts being interacted with
     Token public tokenContract;
     NFT public NFTContract;
@@ -13,21 +24,11 @@ contract Controller is IERC721Receiver {
     // current owner of controller contract
     address public owner;
 
-    // NFT contract max supply
-    uint256 maxSupplyNFT;
-
     // amount of tokens required to mint a single NFT
     uint256 public tokensPerNFT;
 
     // reward tokens per day staked
     uint256 public rewardTokens;
-
-    struct nftRecord {
-        // current owner
-        address owner;
-        // block.timestamp of when NFT was staked
-        uint256 timeStaked;
-    }
 
     // Links tokenID  to address and total time staked
     mapping(uint256 => nftRecord) public controllerNFTRecord;
@@ -42,18 +43,16 @@ contract Controller is IERC721Receiver {
     event unstakedNFT(address indexed _from, uint256 _tokenID);
     event claimedRewards(address indexed _from, uint256 _claimAmount);
 
-    constructor(
-        uint256 _tokensPerWei,
-        uint256 _maxSupplyNFT,
+    function initialize(
+        address _NFT,
+        address _Token,
         uint256 _tokensPerNFT,
         uint256 _rewardTokens
-    ) {
-        NFTContract = new NFT();
-        tokenContract = new Token(_tokensPerWei);
+    ) external initializer {
+        NFTContract = NFT(_NFT);
+        tokenContract = Token(_Token);
 
         owner = msg.sender;
-
-        maxSupplyNFT = _maxSupplyNFT;
 
         tokensPerNFT = _tokensPerNFT;
 
@@ -101,7 +100,7 @@ contract Controller is IERC721Receiver {
         // event for frontend to know which NFT was staked by whom
         emit stakedNFT(from, tokenId, block.timestamp);
 
-        return IERC721Receiver.onERC721Received.selector;
+        return IERC721ReceiverUpgradeable.onERC721Received.selector;
     }
 
     /*
@@ -113,7 +112,14 @@ contract Controller is IERC721Receiver {
         uint256 totalOwned = totalUserStaked[msg.sender];
         uint256[] memory ownedNFTS = new uint256[](totalOwned);
 
-        for (uint256 i = 1; i < maxSupplyNFT; i++) {
+        //uint256 maxSupplyNFT = NFTContract.MAX_SUPPLY;
+        (bool success, bytes memory data) = address(NFTContract).staticcall(
+            abi.encodeWithSignature("MAX_SUPPLY()")
+        );
+        require(success);
+
+        uint256 MAX_SUPPLY = uint256(bytes32(data));
+        for (uint256 i = 1; i < MAX_SUPPLY; i++) {
             // iterating over all NFTs, would not be preferred if this wasn't a view function
             if (controllerNFTRecord[i].owner == msg.sender) {
                 // tokenid stored in arr
@@ -146,7 +152,7 @@ contract Controller is IERC721Receiver {
 
             // amount of days they have staked for
             uint256 stakedAt = controllerNFTRecord[tokenID].timeStaked;
-            uint256 daysStaked = (block.timestamp - stakedAt) / 1 days;
+            uint256 daysStaked = (block.timestamp - stakedAt) / 1 seconds;
 
             if (!withdrawFlag) {
                 require(
@@ -174,15 +180,39 @@ contract Controller is IERC721Receiver {
                 );
             }
 
-            // increment their token to claim
+            // increment their amount to claim
             claimAmount += daysStaked * rewardTokens;
         }
 
         // event for frontend to know rewards were claimed
         emit claimedRewards(msg.sender, claimAmount);
 
-        // transfer token to user (staking reward)
-        tokenContract.stakingMint(msg.sender, claimAmount);
+        // Get token max supply
+        (bool success, bytes memory data) = address(tokenContract).staticcall(
+            abi.encodeWithSignature("cap()")
+        );
+        require(success);
+
+        uint256 maxSupply = uint256(bytes32(data));
+
+        // Get token current supply
+        (success, data) = address(tokenContract).staticcall(
+            abi.encodeWithSignature("totalSupply()")
+        );
+        require(success);
+
+        uint256 currentSupply = uint256(bytes32(data));
+
+        /*
+         *  @dev only transfer staking rewards if it doesn't exceed max supply
+         *  else transfer possible claimable reward
+         */
+        uint256 maxClaimable = maxSupply - currentSupply;
+        if (claimAmount < maxClaimable) {
+            tokenContract.stakingMint(msg.sender, claimAmount);
+        } else {
+            tokenContract.stakingMint(msg.sender, maxClaimable);
+        }
     }
 
     /*
