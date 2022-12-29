@@ -11,7 +11,7 @@ contract NFT is Initializable, ERC721Upgradeable, UUPSUpgradeable {
     address deployer;
 
     address public controller;
-    uint256 public tokenSupply;
+    uint256 public tokenSupply = 1;
     uint256 public MAX_SUPPLY;
 
     // @dev  must set implementation and initalize in the same transaction
@@ -52,12 +52,19 @@ contract NFT is Initializable, ERC721Upgradeable, UUPSUpgradeable {
     /*
      *  @dev mints are controlled only by the controller contract
      *  NFT's are minted in sequential order (only 1 owner per ID)
-     *  current supply = current ID to mint
+     *  current supply = current ID to mint + 1
      */
     function mint(address recipient) external onlyController {
-        require(tokenSupply < MAX_SUPPLY, "Maximum amount of NFTs minted");
-        tokenSupply++;
-        _safeMint(recipient, tokenSupply);
+        // cache storage variable on stack for gas efficiency
+        uint256 _tokenSupply = tokenSupply;
+        require(_tokenSupply < MAX_SUPPLY, "Maximum amount of NFTs minted");
+
+        // mint total supply - 1 as we start the totalSupply at 1
+        unchecked {
+            // unchecked as we already place a cap on the sequential mints
+            tokenSupply = _tokenSupply;
+        }
+        _safeMint(recipient, _tokenSupply - 1);
     }
 
     // @dev internal check that ensures only initial deployer can upgrade the contract

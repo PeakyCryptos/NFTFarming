@@ -18,7 +18,7 @@ The Controller contract has priviliges to mint tokens at it's discretion (see co
 
 The NFT contract uses Openzeppelin's ERC721 standard. A cap on max supply is set via a constructor defined argument.
 
-Only the controller contract has authorization to mint NFT's based on it's logic (see controller section). All mints begin at tokenID of 1 and are minted in numerical order.
+Only the controller contract has authorization to mint NFT's based on it's logic (see controller section). All NFT's are minted in numerical order.
 
 # Deployment Execution Flow
 
