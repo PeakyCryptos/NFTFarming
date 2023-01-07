@@ -163,7 +163,7 @@ contract Controller is
 
             // amount of days they have staked for
             uint256 stakedAt = controllerNFTRecord[tokenID].timeStaked;
-            uint256 daysStaked = (block.timestamp - stakedAt) / 1 seconds;
+            uint256 daysStaked = (block.timestamp - stakedAt) / 1 days;
 
             if (!withdrawFlag) {
                 require(
